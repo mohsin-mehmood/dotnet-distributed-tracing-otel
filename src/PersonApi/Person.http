@@ -1,0 +1,36 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+
+@PersonApi_HostAddress = http://localhost:6200
+
+### Create a new person
+POST {{PersonApi_HostAddress}}/person
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "age": 30,
+  "email": "john.doe@example.com",
+  "address": "123 Main St, Springfield, IL"
+}
+
+### Create another person example
+POST {{PersonApi_HostAddress}}/person
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "age": 28,
+  "email": "jane.smith@example.com",
+  "address": "456 Oak Ave, Portland, OR"
+}
+
+### Create a person with minimal information
+POST {{PersonApi_HostAddress}}/person
+Content-Type: application/json
+
+{
+  "name": "Bob Johnson",
+  "age": 45,
+  "email": "bob.johnson@example.com",
+  "address": "789 Pine Rd, Denver, CO"
+}

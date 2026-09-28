@@ -39,13 +39,13 @@ namespace PersonWorker
             {
                 Uri = new Uri(_configuration["RabbitMQ:ConnectionString"]!)
             };
-            using var connection = factory.CreateConnection();
-            using var channel = connection.CreateModel();
+            using var connection = await factory.CreateConnectionAsync();
+            using var channel = await connection.CreateChannelAsync();
 
-            var consumer = new EventingBasicConsumer(channel);
-            consumer.Received += ReceiveMessage;
-            channel.QueueDeclare(_queueName);
-            channel.BasicConsume(queue: _queueName,
+            var consumer = new AsyncEventingBasicConsumer(channel);
+            consumer.ReceivedAsync += ReceiveMessage;
+            await channel.QueueDeclareAsync(_queueName);
+            await channel.BasicConsumeAsync(queue: _queueName,
                 autoAck: true,
                 consumer: consumer);
 
@@ -56,7 +56,7 @@ namespace PersonWorker
             }
         }
 
-        private void ReceiveMessage(object? sender, BasicDeliverEventArgs e)
+        private async Task ReceiveMessage(object? sender, BasicDeliverEventArgs e)
         {
             // Solution reference:
             // https://github.com/open-telemetry/opentelemetry-dotnet/tree/main/examples/MicroserviceExample
@@ -111,11 +111,11 @@ namespace PersonWorker
             }
         }
 
-        private IEnumerable<string> ExtractTraceContextFromBasicProperties(IBasicProperties props, string key)
+        private IEnumerable<string> ExtractTraceContextFromBasicProperties(IReadOnlyBasicProperties props, string key)
         {
             try
             {
-                if (props.Headers.TryGetValue(key, out var value))
+                if (props.Headers?.TryGetValue(key, out var value) == true)
                 {
                     var bytes = value as byte[];
                     return new[] { Encoding.UTF8.GetString(bytes!) };

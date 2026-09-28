@@ -6,46 +6,46 @@ using System.Runtime.InteropServices;
 
 namespace PersonApi.Controllers
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class PersonController : Controller
-    {
-        private readonly ILogger<PersonController> _logger;
-        private readonly IConfiguration _configuration;
-        private readonly MessageSender _messageSender;
+	[ApiController]
+	[Route("[controller]")]
+	public class PersonController : Controller
+	{
+		private readonly ILogger<PersonController> _logger;
+		private readonly IConfiguration _configuration;
+		private readonly MessageSender _messageSender;
 
-        public PersonController(ILogger<PersonController> logger,
-        IConfiguration configuration, MessageSender messageSender)
-        {
-            _logger = logger;
-            _configuration = configuration;
-            _messageSender = messageSender;
-        }
+		public PersonController(ILogger<PersonController> logger,
+		IConfiguration configuration, MessageSender messageSender)
+		{
+			_logger = logger;
+			_configuration = configuration;
+			_messageSender = messageSender;
+		}
 
-        [HttpPost]
-        public IActionResult Post([FromBody] Person person)
-        {
-            _logger.LogInformation("Processing Person...");
+		[HttpPost]
+		public async Task<IActionResult> Post([FromBody] Person person)
+		{
+			_logger.LogInformation("Processing Person...");
 
-            string correlationId = Guid.NewGuid().ToString();
+			string correlationId = Guid.NewGuid().ToString();
 
-            using var activity = OpenTelemetryExtensions.CreateActivitySource().StartActivity("PersonalInfo");
-            activity?.SetTag("personName", person.Name);
-            activity?.SetTag("correlationId", correlationId);
+			using var activity = OpenTelemetryExtensions.CreateActivitySource().StartActivity("PersonalInfo");
+			activity?.SetTag("personName", person.Name);
+			activity?.SetTag("correlationId", correlationId);
 
-            var envelope = new PersonEnvelope()
-            {
-                Person = person,
-                CorrelationId = correlationId,
-                Producer = OpenTelemetryExtensions.ServiceName,
-                Kernel = Environment.OSVersion.VersionString,
-                Framework = RuntimeInformation.FrameworkDescription
-            };
+			var envelope = new PersonEnvelope()
+			{
+				Person = person,
+				CorrelationId = correlationId,
+				Producer = OpenTelemetryExtensions.ServiceName,
+				Kernel = Environment.OSVersion.VersionString,
+				Framework = RuntimeInformation.FrameworkDescription
+			};
 
-            _logger.LogInformation("Registering Person...");
-            _messageSender.SendMessage<PersonEnvelope>(envelope);
+			_logger.LogInformation("Registering Person...");
+			await _messageSender.SendMessage<PersonEnvelope>(envelope);
 
-            return Ok();
-        }
-    }
+			return Ok();
+		}
+	}
 }

@@ -1,32 +1,79 @@
+version: '3.8'
+
 services:
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    ports:
-      - "6831:6831/udp"
-      - "16686:16686"
-  aspire:
-    image: mcr.microsoft.com/dotnet/nightly/aspire-dashboard:latest
-    ports:
-      - "18888:18888"
-      - "18889:18889"
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+  # SQL Server for Person data persistence
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver-dotnet10-tracing
     environment:
-      SA_PASSWORD: "SqlServer2019!"
       ACCEPT_EULA: "Y"
+      SA_PASSWORD: "SqlServer2019!"
       MSSQL_PID: "Developer"
     ports:
       - "1433:1433"
-  mssqltools:
-    image: mcr.microsoft.com/mssql-tools
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      # FIX 1: Added -C (Trust Server Certificate) to prevent TLS errors during healthcheck
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"SqlServer2019!\" -Q \"SELECT 1\" -b -C"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  # Initialize the database schema after SQL Server is ready
+  init-sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: init-sqlserver-dotnet10-tracing
     depends_on:
-      - sqlserver
+      sqlserver:
+        condition: service_healthy
     volumes:
       - ./person-rabbitmq.sql:/tmp/person-rabbitmq.sql
-      - ./init-sqlserver.sh:/tmp/init-sqlserver.sh
-    command: /bin/bash ./tmp/init-sqlserver.sh
+    # FIX 2: Added -C parameter and targeted the correct container name instead of the generic service name
+    entrypoint: ["/bin/bash", "-c", "/opt/mssql-tools18/bin/sqlcmd -S sqlserver-dotnet10-tracing -U sa -P \"SqlServer2019!\" -d master -i /tmp/person-rabbitmq.sql -C"]
+
+  # RabbitMQ for message queue
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq-dotnet10-tracing
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # .NET Aspire Dashboard for observability monitoring
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    container_name: aspire-dashboard-dotnet10-tracing
+    environment:
+      ASPIRE_API_KEY: ""
+      DOTNET_ASPIRE_PORT: "18888"
+    ports:
+      - "4317:18888" # OpenTelemetry gRPC port
+      - "4318:18889" # OpenTelemetry HTTP port
+      - "18888:18888" # Dashboard web interface port
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18888/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sqlserver-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+
+networks:
+  default:
+    name: dotnet10-tracing-network
