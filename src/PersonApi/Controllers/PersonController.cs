@@ -3,6 +3,7 @@ using PersonApi.Models;
 using PersonApi.Tracing;
 using Microsoft.AspNetCore.Mvc;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace PersonApi.Controllers
 {
@@ -29,7 +30,9 @@ namespace PersonApi.Controllers
 
 			string correlationId = Guid.NewGuid().ToString();
 
-			using var activity = OpenTelemetryExtensions.CreateActivitySource().StartActivity("PersonalInfo");
+			using ActivitySource activitySource = OpenTelemetryExtensions.CreateActivitySource("PersonController.Post");			
+			using var activity = activitySource.StartActivity("PersonalInfo");
+			
 			activity?.SetTag("personName", person.Name);
 			activity?.SetTag("correlationId", correlationId);
 

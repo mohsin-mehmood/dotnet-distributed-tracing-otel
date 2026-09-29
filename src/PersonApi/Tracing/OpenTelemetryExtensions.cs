@@ -20,6 +20,9 @@ namespace PersonApi.Tracing
 			ServiceVersion = typeof(OpenTelemetryExtensions).Assembly.GetName().Version!.ToString();
 		}
 
+		public static ActivitySource CreateActivitySource(string activitySourceName) =>
+			new ActivitySource(activitySourceName);
+
 		public static ActivitySource CreateActivitySource() =>
 			new ActivitySource(ServiceName, ServiceVersion);
 
@@ -42,6 +45,7 @@ namespace PersonApi.Tracing
 				.WithTracing(tracing =>
 				{
 					tracing.AddSource(OpenTelemetryExtensions.ServiceName)
+						.AddSource("PersonController.Post")
 						.AddOtlpExporter(exporter => exporter.Endpoint = aspireOtlpExporterUrl)
 						.AddConsoleExporter();
 				})

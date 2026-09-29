@@ -67,7 +67,7 @@ namespace PersonWorker
 
             // Semantic convention - OpenTelemetry messaging specification:
             // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/messaging.md#span-name
-            var activityName = $"{e.RoutingKey} receive";
+            var activityName = "ReceiveMessage"; //$"{e.RoutingKey}-receive";
 
             using var activity = OpenTelemetryExtensions.CreateActivitySource()
                 .StartActivity(activityName, ActivityKind.Consumer, parentContext.ActivityContext);
@@ -78,7 +78,9 @@ namespace PersonWorker
             activity?.SetTag("messaging.system", "rabbitmq");
             activity?.SetTag("messaging.destination_kind", "queue");
             activity?.SetTag("messaging.destination", _configuration["RabbitMQ:Exchange"]);
-            activity?.SetTag("messaging.rabbitmq.routing_key", _queueName);
+			activity?.SetTag("messaging.destination.name", _queueName);
+			activity?.SetTag("messaging.operation", "receive");
+			activity?.SetTag("messaging.rabbitmq.routing_key", _queueName);
 
             PersonEnvelope? envelope;
             try

@@ -31,7 +31,7 @@ namespace PersonApi.Messaging
 
 			// Semantic convention - OpenTelemetry messaging specification:
 			// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/messaging.md#span-name
-			var activityName = $"{queueName} send";
+			var activityName = $"{queueName}-send";
 
 			using var activity = OpenTelemetryExtensions.CreateActivitySource()
 				.StartActivity(activityName, ActivityKind.Producer);
@@ -64,6 +64,8 @@ namespace PersonApi.Messaging
 				activity?.SetTag("messaging.system", "rabbitmq");
 				activity?.SetTag("messaging.destination_kind", "queue");
 				activity?.SetTag("messaging.destination", exchangeName);
+				activity?.SetTag("messaging.destination.name", queueName);
+				activity?.SetTag("messaging.operation", "send");
 				activity?.SetTag("messaging.rabbitmq.routing_key", queueName);
 				activity?.SetTag("message", bodyContent);
 

@@ -22,7 +22,7 @@ namespace PersonWorker.Tracing
 			Local = Environment.MachineName;
 			Kernel = Environment.OSVersion.VersionString;
 			Framework = RuntimeInformation.FrameworkDescription;
-			ServiceName = typeof(OpenTelemetryExtensions).Assembly.GetName().Name! + "RabbitMQ";
+			ServiceName = typeof(OpenTelemetryExtensions).Assembly.GetName().Name!;
 			ServiceInstanceId = typeof(OpenTelemetryExtensions).Assembly.GetName().GetHashCode().ToString();
 			ServiceVersion = typeof(OpenTelemetryExtensions).Assembly.GetName().Version!.ToString();
 		}
